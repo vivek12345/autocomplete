@@ -8,7 +8,7 @@ function init(){
 		el : '#typeahead',
 		url: 'http://www.craftsvilla.com/v1/getAutosuggestion',
 		cache : true,
-		waitTime: 2000,
+		waitTime: 200,
 		minLength : 1
 	});
 }
