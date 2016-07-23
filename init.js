@@ -4,8 +4,8 @@ window.onload = function(){
 }
 
 function init(){
-	var typeahead_object = new Typeahead({
-		el : '#typeahead',
+	var autocomplete_object = new Autocomplete({
+		el : '#searchval',
 		url: 'http://www.craftsvilla.com/v1/getAutosuggestion',
 		cache : true,
 		waitTime: 200,

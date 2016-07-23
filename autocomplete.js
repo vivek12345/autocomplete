@@ -104,24 +104,26 @@
 		this.val = val;
 		this.prev = this.next = null;
 	};
-	var Typeahead = function(options) {
+	var Autocomplete = function(options) {
 		var defaults = {
 			url: null,
 			cache: true,
 			waitTime: 0,
 		};
 		this.options = _.extend(defaults, options || {});
-		this.cache = new LruCache(10);
+		this.options.cache?this.cache = new LruCache(10):this.cache = null;
 		this.attachEventHandlers();
 	}
-	Typeahead.prototype.attachEventHandlers = function() {
+	Autocomplete.prototype.attachEventHandlers = function() {
 		var _this = this;
 		var events = 'keydown keypress cut paste';
-		_.addMultipleEventSources(document.querySelector(this.options.el), events, function(event) {
+		var el = document.querySelector(this.options.el);
+		_.addMultipleEventSources(el, events, function(event) {
 			_this.handleKeyUpEvent();
 		});
+		el.addEventListener('blur', _this.removeDropDownMenu);
 	}
-	Typeahead.prototype.sendXhrRequest = function(query) {
+	Autocomplete.prototype.sendXhrRequest = function(query) {
 		var _this = this;
 		var xhr = new XMLHttpRequest();
 		xhr.withCredentials = false;
@@ -134,12 +136,65 @@
 		}
 		xhr.send();
 	}
-	Typeahead.prototype.handleKeyUpEvent = _.debounce(function() {
+	Autocomplete.prototype.handleKeyUpEvent = _.debounce(function() {
 		this.fetchTypeaheadData();
 	}, 200);
-	Typeahead.prototype.fetchTypeaheadData = function() {
+	Autocomplete.prototype.fetchTypeaheadData = function() {
 		var query = document.querySelector(this.options.el).value.trim();
-		(query.length > this.options.minLength)?((this.cache.get(query))?this.handleResponse(this.cache.get(query)):this.sendXhrRequest(query)):null;
+		(query.length > this.options.minLength)?((this.cache && this.cache.get(query))?this.handleResponse(this.cache.get(query)):this.sendXhrRequest(query)):null;
+	};
+	Autocomplete.prototype.removeDropDownMenu = function() {
+		document.querySelector('.tt-dataset-1').remove();
 	}
-	window.Typeahead = Typeahead;
+	Autocomplete.prototype.handleResponse = function(response) {
+		var parsedResponse;
+		try {
+			parsedResponse = JSON.parse(response);
+		} catch(exception) {
+			parsedResponse = null;
+		}
+		var dropdownHtml = '<div class="tt-dataset-1"><span class="tt-suggestions" style="display:block;"></span></div>';
+		var dropDownMenu = document.querySelector('.tt-dropdown-menu');
+		dropDownMenu.innerHTML = dropdownHtml;
+		var generatedHtml = this.generateHtml(parsedResponse.data);
+		var suggestionsMenu = document.querySelector('.tt-suggestions');
+		suggestionsMenu.innerHTML = generatedHtml;
+	};
+	Autocomplete.prototype.generateHtml = function(response) {
+		var finalOutput = '';
+		if(response) {
+			response.forEach(function(data) {
+				if(data.type=='product') {
+					var text = [
+						'<div class="tt-suggestion">',
+							'<div class="custom_results_image custom_results">',
+								'<div class="result_image hidden-xs hidden-sm" style="background-image:url(http://img1.craftsvilla.com/thumb/166x166/' + data.image + ')"></div>',
+								'<div class="result_text">' + data.content.text  + '</div>'
+					].join('\n');
+					if(data.vendor_name.trim().length) {
+						text = text.concat(['<div class="result_text hidden-xs hidden-sm">by ' + data.vendor_name  + '</div>']);
+					}
+					var other_text = [
+						'<div class="result_text hidden-xs hidden-sm"><span class="discount_price">Rs. ' + parseInt(data.discounted_price)  + '</span></div>',
+						'<div class="result_type visible-xs visible-sm" id="product_type">  Product </div>',
+					'</div></div>'
+					].join('\n');
+					text = text.concat(other_text);
+					finalOutput = finalOutput.concat(text);
+				} else {
+					var text = [
+						'<div class="tt-suggestion">',
+							'<div class="custom_results_text custom_results">',
+								'<div class="result_text">' + data.content.text + '</div>',
+								'<div class="result_type"> ' + data.type + '</div>',
+							'</div>',
+						'</div>'
+					].join('\n');
+					finalOutput = finalOutput.concat(text);
+				}
+			});
+		}
+		return finalOutput;
+	}
+	window.Autocomplete = Autocomplete;
 })();
