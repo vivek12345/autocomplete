@@ -119,7 +119,7 @@
 		var events = 'keydown keypress cut paste';
 		var el = document.querySelector(this.options.el);
 		_.addMultipleEventSources(el, events, function(event) {
-			_this.handleKeyUpEvent();
+			_this.handleInputChangeEvent();
 		});
 		el.addEventListener('blur', _this.removeDropDownMenu);
 	}
@@ -136,10 +136,10 @@
 		}
 		xhr.send();
 	}
-	Autocomplete.prototype.handleKeyUpEvent = _.debounce(function() {
-		this.fetchTypeaheadData();
+	Autocomplete.prototype.handleInputChangeEvent = _.debounce(function() {
+		this.fetchAutocompleteData();
 	}, 200);
-	Autocomplete.prototype.fetchTypeaheadData = function() {
+	Autocomplete.prototype.fetchAutocompleteData = function() {
 		var query = document.querySelector(this.options.el).value.trim();
 		(query.length > this.options.minLength)?((this.cache && this.cache.get(query))?this.handleResponse(this.cache.get(query)):this.sendXhrRequest(query)):null;
 	};
