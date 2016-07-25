@@ -42,6 +42,24 @@
 				for(var i=0;i<sources.length;i++) {
 					el.addEventListener(sources[i], handler);
 				}
+			},
+			customEvent: function(name, optionalData, el) {
+				var event; // The custom event that will be created
+				if (document.createEvent) {
+					event = document.createEvent("HTMLEvents");
+					event.response = optionalData;
+					event.initEvent(name, true, true);
+				} else {
+					event = document.createEventObject();
+					event.response = optionalData;
+					event.eventType = "HTMLEvents";
+				}
+				event.eventName = name;
+				if (document.createEvent) {
+					el.dispatchEvent(event);
+				} else {
+					el.fireEvent("on" + event.eventType, event);
+				}
 			}
 		};
 	}();
@@ -119,6 +137,13 @@
 		var events = 'keydown keypress cut paste';
 		var el = document.querySelector(this.options.el);
 		_.addMultipleEventSources(el, events, function(event) {
+			if(event.type === 'keydown' || event.type === 'keypress') {
+				if(event.keyCode == 40 || event.keyCode == 38) {
+					console.log('fired');
+					_.customEvent('focus', null, document.querySelector('.tt-suggestion'));
+					return;
+				}
+			}
 			_this.handleInputChangeEvent();
 		});
 		el.addEventListener('blur', _this.removeDropDownMenu);
@@ -156,45 +181,28 @@
 		var dropdownHtml = '<div class="tt-dataset-1"><span class="tt-suggestions" style="display:block;"></span></div>';
 		var dropDownMenu = document.querySelector('.tt-dropdown-menu');
 		dropDownMenu.innerHTML = dropdownHtml;
-		var generatedHtml = this.generateHtml(parsedResponse.data);
-		var suggestionsMenu = document.querySelector('.tt-suggestions');
-		suggestionsMenu.innerHTML = generatedHtml;
+		document.querySelector('body').addEventListener('autocomplete:suggestions_displayed', this.attachKeyAndHoverEvents);
+		_.customEvent("autocomplete:completed", parsedResponse.data, document.querySelector('body'));
 	};
-	Autocomplete.prototype.generateHtml = function(response) {
-		var finalOutput = '';
-		if(response) {
-			response.forEach(function(data) {
-				if(data.type=='product') {
-					var text = [
-						'<div class="tt-suggestion">',
-							'<div class="custom_results_image custom_results">',
-								'<div class="result_image hidden-xs hidden-sm" style="background-image:url(http://img1.craftsvilla.com/thumb/166x166/' + data.image + ')"></div>',
-								'<div class="result_text">' + data.content.text  + '</div>'
-					].join('\n');
-					if(data.vendor_name.trim().length) {
-						text = text.concat(['<div class="result_text hidden-xs hidden-sm">by ' + data.vendor_name  + '</div>']);
+	Autocomplete.prototype.attachKeyAndHoverEvents = function(event) {
+		var _this = this;
+		var suggestions = document.querySelectorAll('.tt-suggestion');
+		suggestions.forEach(function(suggestion) {
+			suggestion.addEventListener('focus', function(event) {
+				var node = this.parentNode.firstChild;
+				while( node && node.nodeType === 1 ) {
+					if(node !== this) {
+						node.className = 'tt-suggestion';
 					}
-					var other_text = [
-						'<div class="result_text hidden-xs hidden-sm"><span class="discount_price">Rs. ' + parseInt(data.discounted_price)  + '</span></div>',
-						'<div class="result_type visible-xs visible-sm" id="product_type">  Product </div>',
-					'</div></div>'
-					].join('\n');
-					text = text.concat(other_text);
-					finalOutput = finalOutput.concat(text);
-				} else {
-					var text = [
-						'<div class="tt-suggestion">',
-							'<div class="custom_results_text custom_results">',
-								'<div class="result_text">' + data.content.text + '</div>',
-								'<div class="result_type"> ' + data.type + '</div>',
-							'</div>',
-						'</div>'
-					].join('\n');
-					finalOutput = finalOutput.concat(text);
+					node = node.nextElementSibling || node.nextSibling;
 				}
+				this.className = 'tt-suggestion tt-cursor';
 			});
-		}
-		return finalOutput;
+			suggestion.addEventListener('keypress', function(event) {
+				console.log('fired');
+				_.customEvent('focus', null, (this.nextElementSibling || this.nextSibling));
+			});
+		});
 	}
 	window.Autocomplete = Autocomplete;
 })();
